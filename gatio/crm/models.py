@@ -4,51 +4,46 @@ from django.contrib.auth.models import User
 # Create your models here.
 
 
-class BaseUser(models.Model):
+class Client(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
-    first_name = models.CharField(max_length=32)
-    last_name = models.CharField(max_length=32)
     phone = models.CharField(max_length=32)
-    email = models.CharField(max_length=32)
     ssn = models.CharField(max_length=32)
     company_name = models.CharField(max_length=32)
     company_id = models.CharField(max_length=32)
     address = models.CharField(max_length=32)
 
 
-class Seller(BaseUser):
-    pass
-
-
-class ScreenOwner(BaseUser):
-    rate = models.IntegerField()
-    credit = models.IntegerField()
-
-
-class Advertiser(BaseUser):
-    rate = models.IntegerField()
-    credit = models.IntegerField()
-
-
 class Contract(models.Model):
-    owner = models.ForeignKey(User, on_delete=models.CASCADE)
-    seller = models.ForeignKey(Seller, on_delete=models.CASCADE)
+    owner = models.ForeignKey(Client, on_delete=models.CASCADE)
     start = models.DateField()
     end = models.DateField()
 
+
 class Match(models.Model):
-    screen_owner = models.ForeignKey(ScreenOwner, on_delete=models.CASCADE)
-    advertiser = models.ForeignKey(Advertiser, on_delete=models.CASCADE)
+    screen_owner = models.ForeignKey(Client, related_name="matchings_adds", on_delete=models.CASCADE)
+    advertiser = models.ForeignKey(Client, related_name="matching_screens", on_delete=models.CASCADE)
     start = models.DateField()
     end = models.DateField()
     frequency = models.IntegerField()
     price = models.IntegerField()
 
-class Advertisement(models.Model):
+
+def user_directory_path(instance, filename):
+    # file will be uploaded to MEDIA_ROOT/user_<id>/<filename>
+    user = instance.owner.id if instance.owner else "default_user"
+    return 'user_{0}/{1}'.format(user, filename)
+
+
+class MediaContent(models.Model):
+    owner = models.ForeignKey(Client, null=True, on_delete=models.CASCADE)
     code = models.CharField(max_length=32)
-    media_url = models.URLField()
-    length = models.DurationField()
-    advertiser = models.ForeignKey(Advertiser, on_delete=models.CASCADE)
+    media_file = models.FileField(upload_to=user_directory_path)
+    media_length = models.DurationField()
+
+
+class Advertisement(models.Model):
+    media_content = models.ForeignKey(MediaContent, null=True, on_delete=models.CASCADE)
+    advertiser = models.ForeignKey(Client, on_delete=models.CASCADE)
 
 
 class ScreenSpecifications(models.Model):
@@ -58,5 +53,6 @@ class ScreenSpecifications(models.Model):
 
 class Screen(models.Model):
     specification = models.ForeignKey(ScreenSpecifications, on_delete=models.CASCADE)
-    screenowner = models.ForeignKey(ScreenOwner, on_delete=models.CASCADE)
-
+    screen_owner = models.ForeignKey(Client,related_name="screens", default=None, on_delete=models.CASCADE)
+    default_content = models.ForeignKey(MediaContent, null=True, on_delete=models.CASCADE)
+    screen_client = models.OneToOneField(Client, related_name="machine", default=None, on_delete=models.CASCADE)
