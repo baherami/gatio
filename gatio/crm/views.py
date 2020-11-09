@@ -2,15 +2,19 @@ from django.http import HttpResponse
 from django.shortcuts import render
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import authenticate, login, logout
-
+from .models import *
 # Create your views here.
+
+STANDARD_ADVERTISMENT_LENGTH = 20
 
 @login_required
 def index(request):
     user = request.user
-    if user.groups.first() == "machine":
-        return HttpResponse(f"Welcome my son.")
-    return HttpResponse(f"Hello, {user} . You're at the index.")
+    if user.groups.first().name == "Machine":
+        return get_next_batch(request)
+        #return HttpResponse(f"Welcome my son.")
+    else:
+        return HttpResponse(f"Hello, {user} . You're at the index.")
 
 
 def log_in(request):
@@ -32,13 +36,24 @@ def logout_view(request):
 # broad cast
 @login_required
 def get_next_batch(request):
-    user = request.user
-    #match =
-    return HttpResponse("get_next.")
+    screen = Screen.objects.get(screen_client=request.user.client)
+    screen_owner = screen.screen_owner
 
-
-def match_make(request):
-    return HttpResponse("matchmake.")
+    matches = Match.objects.filter(screen_owner=screen_owner)
+    if not matches.exists():
+         matches = screen_owner.match_make()
+         return "array"
+    else:
+        ad_lengths = 0
+        for match in matches:
+            advertisor = match.advertiser
+            ads = Advertisement.objects.filter(advertisor=advertisor)
+            for ad in ads:
+                ad_lengths += ad.media_content.media_length
+        if ad_lengths < STANDARD_ADVERTISMENT_LENGTH:
+            matches = screen_owner.match_make()
+            return "array"
+    return HttpResponse(matches)
 
 
 def profile(request):

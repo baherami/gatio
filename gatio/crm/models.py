@@ -12,6 +12,12 @@ class Client(models.Model):
     company_id = models.CharField(max_length=32)
     address = models.CharField(max_length=32)
 
+    def __str__(self):
+        return f"{self.user}"
+
+    def match_make(self):
+        pass
+
 
 class Contract(models.Model):
     owner = models.ForeignKey(Client, on_delete=models.CASCADE)
@@ -40,10 +46,20 @@ class MediaContent(models.Model):
     media_file = models.FileField(upload_to=user_directory_path)
     media_length = models.DurationField()
 
-
 class Advertisement(models.Model):
     media_content = models.ForeignKey(MediaContent, null=True, on_delete=models.CASCADE)
     advertiser = models.ForeignKey(Client, on_delete=models.CASCADE)
+    number_of_broad_cast = models.IntegerField(default=1)
+    is_active = models.BooleanField(default=True)
+
+    def broadcast(self):
+        if not self.is_active:
+            self.number_of_broad_cast = 0
+        else:
+            self.number_of_broad_cast -= 1
+            if self.number_of_broad_cast == 0:
+                self.is_active = False
+        return self.is_active
 
 
 class ScreenSpecifications(models.Model):
